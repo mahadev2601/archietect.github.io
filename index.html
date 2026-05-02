@@ -1,0 +1,2390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FORMA — Architecture & Design Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Archivo:wght@300;400;500;600&family=Libre+Baskerville:ital@1&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       CSS CUSTOM PROPERTIES — DESIGN TOKENS
+    ============================================================ */
+    :root {
+      --c-bg:       #0e0d0b;
+      --c-surface:  #141310;
+      --c-card:     #1a1916;
+      --c-border:   rgba(255,255,255,0.08);
+      --c-text:     #f0ece4;
+      --c-muted:    rgba(240,236,228,0.45);
+      --c-accent:   #c8a96e;
+      --c-accent2:  #8b6f47;
+      --c-white:    #ffffff;
+
+      --ff-display: 'Cormorant Garamond', Georgia, serif;
+      --ff-body:    'Archivo', Helvetica, sans-serif;
+      --ff-italic:  'Libre Baskerville', Georgia, serif;
+
+      --fs-hero:    clamp(3.5rem, 9vw, 9rem);
+      --fs-h2:      clamp(2.4rem, 5vw, 5rem);
+      --fs-h3:      clamp(1.6rem, 3vw, 2.8rem);
+      --fs-h4:      clamp(1.1rem, 2vw, 1.6rem);
+      --fs-body:    clamp(0.9rem, 1.4vw, 1.05rem);
+      --fs-sm:      0.8rem;
+      --fs-label:   0.7rem;
+
+      --space-xs:   0.5rem;
+      --space-sm:   1rem;
+      --space-md:   2rem;
+      --space-lg:   4rem;
+      --space-xl:   8rem;
+      --space-2xl:  14rem;
+
+      --nav-h:      80px;
+      --radius:     2px;
+      --trans:      0.45s cubic-bezier(0.25,0.46,0.45,0.94);
+      --trans-fast: 0.2s ease;
+    }
+
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+    body {
+      background: var(--c-bg);
+      color: var(--c-text);
+      font-family: var(--ff-body);
+      font-weight: 300;
+      line-height: 1.7;
+      overflow-x: hidden;
+      cursor: none;
+    }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    ul { list-style: none; }
+    input, textarea, select { font-family: inherit; }
+
+    /* ============================================================
+       CUSTOM CURSOR
+    ============================================================ */
+    .cursor {
+      position: fixed;
+      width: 8px; height: 8px;
+      background: var(--c-accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: transform 0.1s ease, width 0.3s ease, height 0.3s ease, background 0.3s ease;
+      mix-blend-mode: normal;
+    }
+    .cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 1px solid rgba(200,169,110,0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: transform 0.12s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+    }
+    body.cursor-hover .cursor { width: 14px; height: 14px; background: var(--c-white); }
+    body.cursor-hover .cursor-ring { width: 56px; height: 56px; border-color: var(--c-accent); }
+
+    /* ============================================================
+       SCROLLBAR
+    ============================================================ */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--c-bg); }
+    ::-webkit-scrollbar-thumb { background: var(--c-accent2); }
+
+    /* ============================================================
+       NOISE OVERLAY
+    ============================================================ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 10000;
+      opacity: 0.35;
+    }
+
+    /* ============================================================
+       TYPOGRAPHY HELPERS
+    ============================================================ */
+    .label {
+      font-family: var(--ff-body);
+      font-size: var(--fs-label);
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+    }
+    .section-title {
+      font-family: var(--ff-display);
+      font-size: var(--fs-h2);
+      font-weight: 300;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+    .section-title em {
+      font-style: italic;
+      color: var(--c-accent);
+    }
+    .section-intro {
+      font-size: var(--fs-body);
+      color: var(--c-muted);
+      max-width: 520px;
+      line-height: 1.8;
+    }
+
+    /* ============================================================
+       LAYOUT UTILITIES
+    ============================================================ */
+    .container {
+      max-width: 1340px;
+      margin: 0 auto;
+      padding: 0 clamp(1.5rem, 4vw, 4rem);
+    }
+    .section { padding: var(--space-xl) 0; }
+    .section--dark { background: var(--c-surface); }
+    .section--card { background: var(--c-card); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+    .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--space-md); }
+
+    /* ============================================================
+       SCROLL REVEAL ANIMATION
+    ============================================================ */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.9s cubic-bezier(0.22,1,0.36,1), transform 0.9s cubic-bezier(0.22,1,0.36,1);
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .reveal-delay-1 { transition-delay: 0.15s; }
+    .reveal-delay-2 { transition-delay: 0.3s; }
+    .reveal-delay-3 { transition-delay: 0.45s; }
+    .reveal-delay-4 { transition-delay: 0.6s; }
+
+    /* ============================================================
+       LINE DIVIDER
+    ============================================================ */
+    .line { width: 60px; height: 1px; background: var(--c-accent); margin-bottom: var(--space-md); }
+    .line--long { width: 120px; }
+
+    /* ============================================================
+       ① NAVBAR
+    ============================================================ */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      height: var(--nav-h);
+      display: flex;
+      align-items: center;
+      transition: background var(--trans), box-shadow var(--trans);
+    }
+    .nav.scrolled {
+      background: rgba(14,13,11,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 1px 0 var(--c-border);
+    }
+    .nav__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .nav__logo {
+      font-family: var(--ff-display);
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--c-white);
+    }
+    .nav__logo span { color: var(--c-accent); }
+    .nav__links {
+      display: flex;
+      gap: var(--space-lg);
+      align-items: center;
+    }
+    .nav__links a {
+      font-size: var(--fs-sm);
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+      position: relative;
+      transition: color var(--trans-fast);
+    }
+    .nav__links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0; height: 1px;
+      background: var(--c-accent);
+      transition: width var(--trans);
+    }
+    .nav__links a:hover { color: var(--c-white); }
+    .nav__links a:hover::after { width: 100%; }
+    .nav__cta {
+      border: 1px solid var(--c-accent);
+      color: var(--c-accent) !important;
+      padding: 0.55rem 1.4rem;
+      border-radius: var(--radius);
+      transition: background var(--trans), color var(--trans) !important;
+    }
+    .nav__cta:hover { background: var(--c-accent); color: var(--c-bg) !important; }
+    .nav__cta::after { display: none !important; }
+
+    /* Mobile hamburger */
+    .nav__hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 6px;
+      background: none;
+      border: none;
+    }
+    .nav__hamburger span {
+      display: block;
+      width: 24px; height: 1px;
+      background: var(--c-text);
+      transition: var(--trans);
+    }
+    .nav__hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .nav__hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav__hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+    /* Mobile menu overlay */
+    .nav__mobile {
+      position: fixed;
+      inset: 0;
+      background: var(--c-bg);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--trans);
+    }
+    .nav__mobile.open { opacity: 1; pointer-events: all; }
+    .nav__mobile a {
+      font-family: var(--ff-display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      color: var(--c-muted);
+      transition: color var(--trans-fast);
+    }
+    .nav__mobile a:hover { color: var(--c-accent); }
+
+    /* ============================================================
+       ② HERO SECTION
+    ============================================================ */
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding-bottom: var(--space-xl);
+      overflow: hidden;
+    }
+    .hero__bg {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to bottom, rgba(14,13,11,0.3) 0%, rgba(14,13,11,0.7) 60%, rgba(14,13,11,1) 100%),
+        linear-gradient(135deg, #1a1410 0%, #2c2217 30%, #1e1a14 60%, #0e0d0b 100%);
+    }
+    /* Geometric architectural lines */
+    .hero__bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(200,169,110,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,169,110,0.04) 1px, transparent 1px);
+      background-size: 100px 100px;
+    }
+    .hero__bg::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 55%;
+      height: 100%;
+      background: linear-gradient(135deg, transparent 0%, rgba(200,169,110,0.06) 50%, transparent 100%),
+        url('https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=1200&q=80') center/cover no-repeat;
+      opacity: 0.5;
+      mask-image: linear-gradient(to left, rgba(0,0,0,0.9) 0%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.9) 0%, transparent 100%);
+    }
+
+    .hero__content {
+      position: relative;
+      z-index: 2;
+      padding-top: var(--nav-h);
+    }
+    .hero__eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      opacity: 0;
+      animation: fadeUp 1s cubic-bezier(0.22,1,0.36,1) 0.3s forwards;
+    }
+    .hero__eyebrow .line { margin: 0; }
+    .hero__headline {
+      font-family: var(--ff-display);
+      font-size: var(--fs-hero);
+      font-weight: 300;
+      line-height: 0.95;
+      letter-spacing: -0.025em;
+      max-width: 900px;
+      opacity: 0;
+      animation: fadeUp 1.1s cubic-bezier(0.22,1,0.36,1) 0.5s forwards;
+    }
+    .hero__headline em {
+      font-style: italic;
+      color: var(--c-accent);
+    }
+    .hero__sub {
+      margin-top: 2.5rem;
+      font-size: clamp(1rem, 1.5vw, 1.15rem);
+      color: var(--c-muted);
+      max-width: 480px;
+      line-height: 1.8;
+      opacity: 0;
+      animation: fadeUp 1s cubic-bezier(0.22,1,0.36,1) 0.75s forwards;
+    }
+    .hero__actions {
+      margin-top: 3.5rem;
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 1s cubic-bezier(0.22,1,0.36,1) 0.95s forwards;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--c-accent);
+      color: var(--c-bg);
+      font-family: var(--ff-body);
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 1.1rem 2.4rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--c-accent);
+      cursor: pointer;
+      transition: background var(--trans), color var(--trans), transform var(--trans);
+    }
+    .btn-primary:hover { background: transparent; color: var(--c-accent); transform: translateY(-2px); }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: var(--fs-sm);
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+      transition: color var(--trans-fast);
+    }
+    .btn-secondary:hover { color: var(--c-text); }
+    .btn-arrow { transition: transform var(--trans); }
+    .btn-secondary:hover .btn-arrow { transform: translateX(4px); }
+
+    .hero__stats {
+      display: flex;
+      gap: var(--space-xl);
+      margin-top: var(--space-lg);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--c-border);
+      opacity: 0;
+      animation: fadeUp 1s cubic-bezier(0.22,1,0.36,1) 1.1s forwards;
+    }
+    .hero__stat-number {
+      font-family: var(--ff-display);
+      font-size: clamp(2rem, 3.5vw, 3rem);
+      font-weight: 300;
+      color: var(--c-white);
+      line-height: 1;
+    }
+    .hero__stat-label {
+      font-size: var(--fs-sm);
+      color: var(--c-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 0.3rem;
+    }
+
+    /* Scroll indicator */
+    .hero__scroll {
+      position: absolute;
+      bottom: 2.5rem;
+      right: clamp(1.5rem,4vw,4rem);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 2;
+      opacity: 0;
+      animation: fadeIn 1s 1.5s forwards;
+    }
+    .hero__scroll span {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+      writing-mode: vertical-rl;
+    }
+    .scroll-line {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, var(--c-accent), transparent);
+      animation: scrollPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes scrollPulse {
+      0%,100% { transform: scaleY(1); transform-origin: top; }
+      50%      { transform: scaleY(0.6); }
+    }
+
+    /* ============================================================
+       ③ ABOUT SECTION
+    ============================================================ */
+    .about__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-xl);
+      align-items: center;
+    }
+    .about__image-wrap {
+      position: relative;
+      aspect-ratio: 3/4;
+      overflow: hidden;
+    }
+    .about__image {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      background: linear-gradient(135deg, #1e1a14, #2c2217, #1a1614);
+      transition: transform 0.9s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .about__image-wrap:hover .about__image { transform: scale(1.04); }
+    .about__image--placeholder {
+      position: relative;
+      overflow: hidden;
+    }
+    .about__image--placeholder::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url('https://images.unsplash.com/photo-1618221118493-9cfa1a1c00da?w=800&q=80') center/cover;
+    }
+    .about__badge {
+      position: absolute;
+      bottom: -1.5rem; right: -1.5rem;
+      width: 140px; height: 140px;
+      background: var(--c-accent);
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--c-bg);
+      z-index: 2;
+    }
+    .about__badge-num {
+      font-family: var(--ff-display);
+      font-size: 2.5rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .about__badge-text {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .about__content { padding: var(--space-md) 0; }
+    .about__content .section-title { margin: 1.2rem 0 1.8rem; }
+    .about__body {
+      color: var(--c-muted);
+      line-height: 1.9;
+      margin-bottom: 1.5rem;
+    }
+    .about__body em {
+      font-family: var(--ff-italic);
+      font-style: italic;
+      color: var(--c-text);
+    }
+    .about__signature {
+      font-family: var(--ff-display);
+      font-style: italic;
+      font-size: 2rem;
+      font-weight: 300;
+      color: var(--c-accent);
+      margin-top: 2rem;
+    }
+    .about__signature-name {
+      font-family: var(--ff-body);
+      font-size: var(--fs-sm);
+      color: var(--c-muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 0.3rem;
+    }
+
+    /* ============================================================
+       ④ SERVICES SECTION
+    ============================================================ */
+    .services__header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-lg);
+      align-items: end;
+      margin-bottom: var(--space-lg);
+    }
+    .services__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--c-border);
+      border: 1px solid var(--c-border);
+    }
+    .service-card {
+      background: var(--c-surface);
+      padding: clamp(1.5rem, 3vw, 3rem);
+      position: relative;
+      overflow: hidden;
+      transition: background var(--trans);
+    }
+    .service-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(200,169,110,0.06) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity var(--trans);
+    }
+    .service-card:hover { background: var(--c-card); }
+    .service-card:hover::before { opacity: 1; }
+    .service-num {
+      font-family: var(--ff-display);
+      font-size: 0.9rem;
+      color: var(--c-accent);
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+    .service-icon {
+      width: 48px; height: 48px;
+      margin-bottom: 1.5rem;
+      opacity: 0.6;
+    }
+    .service-title {
+      font-family: var(--ff-display);
+      font-size: clamp(1.3rem,2vw,1.8rem);
+      font-weight: 300;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+    .service-desc {
+      font-size: var(--fs-sm);
+      color: var(--c-muted);
+      line-height: 1.8;
+    }
+    .service-arrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 2rem;
+      font-size: var(--fs-sm);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+      opacity: 0;
+      transform: translateX(-10px);
+      transition: opacity var(--trans), transform var(--trans);
+    }
+    .service-card:hover .service-arrow { opacity: 1; transform: none; }
+
+    /* ============================================================
+       ⑤ PORTFOLIO SECTION
+    ============================================================ */
+    .portfolio__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: var(--space-lg);
+      flex-wrap: wrap;
+      gap: var(--space-md);
+    }
+    .portfolio__filters {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: transparent;
+      border: 1px solid var(--c-border);
+      color: var(--c-muted);
+      font-family: var(--ff-body);
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.6rem 1.3rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all var(--trans-fast);
+    }
+    .filter-btn:hover { border-color: var(--c-accent); color: var(--c-accent); }
+    .filter-btn.active { background: var(--c-accent); border-color: var(--c-accent); color: var(--c-bg); }
+
+    .portfolio__grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: 80px;
+      gap: var(--space-sm);
+    }
+    .project-card {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--c-card);
+      transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.5s ease;
+    }
+    .project-card.hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
+    .project-card:nth-child(1) { grid-column: 1 / 8; grid-row: 1 / 7; }
+    .project-card:nth-child(2) { grid-column: 8 / 13; grid-row: 1 / 5; }
+    .project-card:nth-child(3) { grid-column: 8 / 11; grid-row: 5 / 9; }
+    .project-card:nth-child(4) { grid-column: 11 / 13; grid-row: 5 / 9; }
+    .project-card:nth-child(5) { grid-column: 1 / 5; grid-row: 7 / 11; }
+    .project-card:nth-child(6) { grid-column: 5 / 13; grid-row: 9 / 13; }
+
+    .project-card__img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform 0.9s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .project-card__img-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      transition: transform 0.9s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .project-card:hover .project-card__img-bg { transform: scale(1.07); }
+    .project-card__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(14,13,11,0.92) 0%, rgba(14,13,11,0.2) 50%, transparent 100%);
+      opacity: 0;
+      transition: opacity var(--trans);
+    }
+    .project-card:hover .project-card__overlay { opacity: 1; }
+    .project-card__info {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 1.5rem;
+      transform: translateY(10px);
+      opacity: 0;
+      transition: transform var(--trans), opacity var(--trans);
+    }
+    .project-card:hover .project-card__info { transform: none; opacity: 1; }
+    .project-card__cat {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+      margin-bottom: 0.4rem;
+    }
+    .project-card__title {
+      font-family: var(--ff-display);
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      font-weight: 300;
+    }
+    .project-card__year {
+      font-size: 0.7rem;
+      color: var(--c-muted);
+      margin-top: 0.3rem;
+    }
+
+    /* Project images using unsplash */
+    .project-card:nth-child(1) .project-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1486325212027-8081e485255e?w=900&q=80') center/cover;
+    }
+    .project-card:nth-child(2) .project-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1545670723-196ed0954986?w=700&q=80') center/cover;
+    }
+    .project-card:nth-child(3) .project-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80') center/cover;
+    }
+    .project-card:nth-child(4) .project-card__img-bg {
+      background: linear-gradient(135deg, #1e1a14, #3a2c1a);
+    }
+    .project-card:nth-child(5) .project-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1464146072230-91cabc968266?w=600&q=80') center/cover;
+    }
+    .project-card:nth-child(6) .project-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=1000&q=80') center/cover;
+    }
+
+    /* ============================================================
+       ⑥ PROJECT DETAIL CARDS
+    ============================================================ */
+    .detail-cards__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+    }
+    .detail-card {
+      background: var(--c-card);
+      border: 1px solid var(--c-border);
+      overflow: hidden;
+      position: relative;
+      transition: border-color var(--trans), transform var(--trans);
+    }
+    .detail-card:hover { border-color: rgba(200,169,110,0.3); transform: translateY(-4px); }
+    .detail-card__img {
+      height: 260px;
+      position: relative;
+      overflow: hidden;
+    }
+    .detail-card__img-bg {
+      width: 100%; height: 100%;
+      transition: transform 0.9s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .detail-card:hover .detail-card__img-bg { transform: scale(1.06); }
+    .detail-card:nth-child(1) .detail-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80') center/cover;
+    }
+    .detail-card:nth-child(2) .detail-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1600607686527-6fb886090705?w=600&q=80') center/cover;
+    }
+    .detail-card:nth-child(3) .detail-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1493397212122-2b85dda8106b?w=600&q=80') center/cover;
+    }
+    .detail-card__body { padding: 1.8rem; }
+    .detail-card__meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+    .detail-card__tag {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+    }
+    .detail-card__year {
+      font-size: 0.7rem;
+      color: var(--c-muted);
+    }
+    .detail-card__title {
+      font-family: var(--ff-display);
+      font-size: clamp(1.2rem,2vw,1.6rem);
+      font-weight: 300;
+      margin-bottom: 0.8rem;
+      line-height: 1.2;
+    }
+    .detail-card__desc {
+      font-size: var(--fs-sm);
+      color: var(--c-muted);
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+    }
+    .detail-card__link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+      transition: gap var(--trans);
+    }
+    .detail-card:hover .detail-card__link { gap: 0.8rem; }
+    .detail-card__stats {
+      display: flex;
+      gap: 1.5rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--c-border);
+      margin-top: 1.2rem;
+    }
+    .detail-card__stat-val {
+      font-family: var(--ff-display);
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: var(--c-text);
+    }
+    .detail-card__stat-lbl {
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+    }
+
+    /* ============================================================
+       ⑦ PROCESS SECTION
+    ============================================================ */
+    .process__header { margin-bottom: var(--space-lg); }
+    .process__steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      position: relative;
+      gap: 1px;
+      background: var(--c-border);
+    }
+    .process__step {
+      background: var(--c-surface);
+      padding: clamp(2rem,3vw,3rem);
+      position: relative;
+      overflow: hidden;
+    }
+    .process__step::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 0; height: 2px;
+      background: var(--c-accent);
+      transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
+    }
+    .process__step:hover::before { width: 100%; }
+    .process__num {
+      font-family: var(--ff-display);
+      font-size: 4rem;
+      font-weight: 300;
+      color: rgba(200,169,110,0.15);
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+    .process__title {
+      font-family: var(--ff-display);
+      font-size: clamp(1.2rem,2vw,1.7rem);
+      font-weight: 300;
+      margin-bottom: 1rem;
+    }
+    .process__desc {
+      font-size: var(--fs-sm);
+      color: var(--c-muted);
+      line-height: 1.8;
+    }
+
+    /* ============================================================
+       ⑧ TESTIMONIALS SECTION
+    ============================================================ */
+    .testimonials__inner {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: var(--space-xl);
+      align-items: start;
+    }
+    .testimonials__quote-large {
+      font-family: var(--ff-display);
+      font-size: 12rem;
+      font-weight: 300;
+      color: rgba(200,169,110,0.12);
+      line-height: 0.8;
+      margin-bottom: -2rem;
+    }
+    .testimonial-card {
+      padding: clamp(2rem,3vw,3.5rem);
+      border: 1px solid var(--c-border);
+      background: var(--c-card);
+      margin-bottom: 1.5rem;
+      position: relative;
+      transition: border-color var(--trans);
+    }
+    .testimonial-card.featured { border-color: rgba(200,169,110,0.3); }
+    .testimonial-card__text {
+      font-family: var(--ff-display);
+      font-size: clamp(1.1rem,2vw,1.5rem);
+      font-weight: 300;
+      line-height: 1.6;
+      font-style: italic;
+      color: var(--c-text);
+      margin-bottom: 1.5rem;
+    }
+    .testimonial-card__author {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .testimonial-card__avatar {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-accent), var(--c-accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--ff-display);
+      font-size: 1.2rem;
+      color: var(--c-bg);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .testimonial-card__name {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .testimonial-card__role {
+      font-size: 0.72rem;
+      color: var(--c-muted);
+      letter-spacing: 0.1em;
+    }
+    .testimonial-card__stars {
+      position: absolute;
+      top: 1.8rem; right: 1.8rem;
+      color: var(--c-accent);
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+    }
+
+    /* ============================================================
+       ⑨ AWARDS SECTION
+    ============================================================ */
+    .awards__inner {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: var(--space-xl);
+      align-items: center;
+    }
+    .awards__list { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--c-border); }
+    .award-item {
+      background: var(--c-card);
+      padding: 2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      transition: background var(--trans);
+    }
+    .award-item:hover { background: var(--c-surface); }
+    .award-item__icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      background: rgba(200,169,110,0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .award-item__name {
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      line-height: 1.4;
+      margin-bottom: 0.3rem;
+    }
+    .award-item__year { font-size: 0.7rem; color: var(--c-accent); }
+
+    .partners__row {
+      margin-top: var(--space-lg);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--c-border);
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      flex-wrap: wrap;
+    }
+    .partner-logo {
+      font-family: var(--ff-display);
+      font-size: 1.3rem;
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      color: rgba(240,236,228,0.2);
+      text-transform: uppercase;
+      transition: color var(--trans);
+    }
+    .partner-logo:hover { color: var(--c-muted); }
+
+    /* ============================================================
+       ⑩ BLOG SECTION
+    ============================================================ */
+    .blog__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: var(--space-lg);
+      flex-wrap: wrap;
+      gap: var(--space-md);
+    }
+    .blog__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); }
+    .blog-card {
+      display: flex;
+      flex-direction: column;
+      transition: transform var(--trans);
+    }
+    .blog-card:hover { transform: translateY(-4px); }
+    .blog-card__img {
+      height: 220px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      background: var(--c-card);
+      position: relative;
+    }
+    .blog-card__img-bg {
+      width: 100%; height: 100%;
+      transition: transform 0.8s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .blog-card:hover .blog-card__img-bg { transform: scale(1.06); }
+    .blog-card:nth-child(1) .blog-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80') center/cover;
+    }
+    .blog-card:nth-child(2) .blog-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=600&q=80') center/cover;
+    }
+    .blog-card:nth-child(3) .blog-card__img-bg {
+      background: url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&q=80') center/cover;
+    }
+    .blog-card__meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.8rem;
+    }
+    .blog-card__tag {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+    }
+    .blog-card__date { font-size: 0.7rem; color: var(--c-muted); }
+    .blog-card__title {
+      font-family: var(--ff-display);
+      font-size: clamp(1.1rem,1.8vw,1.5rem);
+      font-weight: 300;
+      line-height: 1.25;
+      margin-bottom: 0.8rem;
+      transition: color var(--trans-fast);
+    }
+    .blog-card:hover .blog-card__title { color: var(--c-accent); }
+    .blog-card__excerpt { font-size: var(--fs-sm); color: var(--c-muted); line-height: 1.8; }
+
+    /* ============================================================
+       ⑪ CONTACT SECTION
+    ============================================================ */
+    .contact__inner {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: var(--space-xl);
+      align-items: start;
+    }
+    .contact__info .section-title { margin: 1.2rem 0 1.5rem; }
+    .contact__detail {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--c-border);
+    }
+    .contact__detail:last-child { border-bottom: none; margin-bottom: 0; }
+    .contact__detail-icon {
+      width: 40px; height: 40px;
+      background: rgba(200,169,110,0.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1rem;
+      color: var(--c-accent);
+    }
+    .contact__detail-lbl {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+      margin-bottom: 0.2rem;
+    }
+    .contact__detail-val { font-size: var(--fs-sm); color: var(--c-muted); }
+
+    /* Contact form */
+    .contact__form {
+      background: var(--c-card);
+      border: 1px solid var(--c-border);
+      padding: clamp(2rem,3vw,3.5rem);
+    }
+    .form__row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .form__group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+    .form__group:last-of-type { margin-bottom: 0; }
+    .form__label {
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+    }
+    .form__input, .form__select, .form__textarea {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      color: var(--c-text);
+      padding: 0.9rem 1.1rem;
+      font-size: var(--fs-sm);
+      border-radius: var(--radius);
+      transition: border-color var(--trans-fast), background var(--trans-fast);
+      outline: none;
+      appearance: none;
+    }
+    .form__input:focus, .form__select:focus, .form__textarea:focus {
+      border-color: var(--c-accent);
+      background: rgba(200,169,110,0.04);
+    }
+    .form__input.error, .form__textarea.error { border-color: #c0392b; }
+    .form__error {
+      font-size: 0.7rem;
+      color: #c0392b;
+      margin-top: 0.3rem;
+      display: none;
+    }
+    .form__error.show { display: block; }
+    .form__textarea { resize: vertical; min-height: 120px; }
+    .form__select option { background: var(--c-card); }
+    .form__submit {
+      width: 100%;
+      margin-top: 1.5rem;
+      background: var(--c-accent);
+      border: none;
+      color: var(--c-bg);
+      font-family: var(--ff-body);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      padding: 1.2rem;
+      cursor: pointer;
+      border-radius: var(--radius);
+      transition: background var(--trans), transform var(--trans);
+    }
+    .form__submit:hover { background: #b8976a; transform: translateY(-2px); }
+    .form__success {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+    .form__success.show { display: block; }
+    .form__success-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .form__success-title {
+      font-family: var(--ff-display);
+      font-size: 1.8rem;
+      font-weight: 300;
+      color: var(--c-accent);
+      margin-bottom: 0.5rem;
+    }
+    .form__success-msg { font-size: var(--fs-sm); color: var(--c-muted); }
+
+    /* ============================================================
+       ⑫ FOOTER
+    ============================================================ */
+    .footer {
+      background: #09090800;
+      border-top: 1px solid var(--c-border);
+      padding: var(--space-xl) 0 var(--space-md);
+    }
+    .footer__top {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+    .footer__brand .nav__logo {
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+    .footer__tagline {
+      font-size: var(--fs-sm);
+      color: var(--c-muted);
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+      max-width: 280px;
+    }
+    .footer__social { display: flex; gap: 0.75rem; }
+    .footer__social a {
+      width: 36px; height: 36px;
+      border: 1px solid var(--c-border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: var(--c-muted);
+      transition: all var(--trans-fast);
+    }
+    .footer__social a:hover { border-color: var(--c-accent); color: var(--c-accent); }
+    .footer__col-title {
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+      margin-bottom: 1.2rem;
+    }
+    .footer__links { display: flex; flex-direction: column; gap: 0.7rem; }
+    .footer__links a {
+      font-size: var(--fs-sm);
+      color: var(--c-muted);
+      transition: color var(--trans-fast);
+    }
+    .footer__links a:hover { color: var(--c-text); }
+    .footer__bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--c-border);
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .footer__copy {
+      font-size: 0.7rem;
+      color: var(--c-muted);
+      letter-spacing: 0.05em;
+    }
+    .footer__bottom-links {
+      display: flex;
+      gap: 2rem;
+    }
+    .footer__bottom-links a {
+      font-size: 0.7rem;
+      color: var(--c-muted);
+      letter-spacing: 0.05em;
+      transition: color var(--trans-fast);
+    }
+    .footer__bottom-links a:hover { color: var(--c-text); }
+
+    /* ============================================================
+       RESPONSIVE — TABLET
+    ============================================================ */
+    @media (max-width: 1024px) {
+      .about__grid { grid-template-columns: 1fr; gap: var(--space-lg); }
+      .about__image-wrap { aspect-ratio: 16/9; }
+      .services__header { grid-template-columns: 1fr; }
+      .services__grid { grid-template-columns: repeat(2, 1fr); }
+      .process__steps { grid-template-columns: repeat(2, 1fr); }
+      .testimonials__inner { grid-template-columns: 1fr; }
+      .testimonials__quote-large { display: none; }
+      .awards__inner { grid-template-columns: 1fr; }
+      .contact__inner { grid-template-columns: 1fr; }
+      .footer__top { grid-template-columns: 1fr 1fr; }
+
+      .portfolio__grid {
+        grid-template-columns: 1fr 1fr;
+        grid-auto-rows: auto;
+      }
+      .project-card:nth-child(1),
+      .project-card:nth-child(2),
+      .project-card:nth-child(3),
+      .project-card:nth-child(4),
+      .project-card:nth-child(5),
+      .project-card:nth-child(6) {
+        grid-column: auto;
+        grid-row: auto;
+        height: 280px;
+      }
+    }
+
+    /* ============================================================
+       RESPONSIVE — MOBILE
+    ============================================================ */
+    @media (max-width: 768px) {
+      :root { --nav-h: 64px; }
+      body { cursor: auto; }
+      .cursor, .cursor-ring { display: none; }
+      .nav__links { display: none; }
+      .nav__hamburger { display: flex; }
+      .services__grid { grid-template-columns: 1fr; }
+      .detail-cards__grid { grid-template-columns: 1fr; }
+      .blog__grid { grid-template-columns: 1fr; }
+      .awards__list { grid-template-columns: 1fr; }
+      .portfolio__grid { grid-template-columns: 1fr; }
+      .project-card { height: 250px; }
+      .project-card .project-card__overlay { opacity: 1; }
+      .project-card .project-card__info { transform: none; opacity: 1; }
+      .form__row { grid-template-columns: 1fr; }
+      .footer__top { grid-template-columns: 1fr; }
+      .footer__bottom { flex-direction: column; align-items: flex-start; }
+      .hero__stats { gap: var(--space-md); }
+      .portfolio__header { flex-direction: column; align-items: flex-start; }
+      .blog__header { flex-direction: column; }
+      .process__steps { grid-template-columns: 1fr; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       SECTION LABEL ROW (reusable header with line)
+    ============================================================ */
+    .section-label-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ============================================================
+       MARQUEE / TICKER
+    ============================================================ */
+    .ticker {
+      overflow: hidden;
+      border-top: 1px solid var(--c-border);
+      border-bottom: 1px solid var(--c-border);
+      padding: 1rem 0;
+      background: var(--c-surface);
+    }
+    .ticker__inner {
+      display: flex;
+      gap: 3rem;
+      animation: marquee 25s linear infinite;
+      white-space: nowrap;
+    }
+    .ticker__item {
+      display: inline-flex;
+      align-items: center;
+      gap: 1.5rem;
+      font-family: var(--ff-display);
+      font-size: 1rem;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      color: var(--c-muted);
+      flex-shrink: 0;
+    }
+    .ticker__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--c-accent); flex-shrink: 0; }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       CUSTOM CURSOR
+  ============================================================ -->
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- ============================================================
+       ① NAVIGATION
+  ============================================================ -->
+  <nav class="nav" id="navbar">
+    <div class="container">
+      <div class="nav__inner">
+        <a href="#" class="nav__logo">FORMA<span>.</span></a>
+        <ul class="nav__links">
+          <li><a href="#about">Studio</a></li>
+          <li><a href="#services">Services</a></li>
+          <li><a href="#portfolio">Portfolio</a></li>
+          <li><a href="#process">Process</a></li>
+          <li><a href="#insights">Insights</a></li>
+          <li><a href="#contact" class="nav__cta">Get in Touch</a></li>
+        </ul>
+        <button class="nav__hamburger" id="hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Mobile Menu -->
+  <div class="nav__mobile" id="mobileMenu">
+    <a href="#about" class="mobile-link">Studio</a>
+    <a href="#services" class="mobile-link">Services</a>
+    <a href="#portfolio" class="mobile-link">Portfolio</a>
+    <a href="#process" class="mobile-link">Process</a>
+    <a href="#insights" class="mobile-link">Insights</a>
+    <a href="#contact" class="mobile-link">Contact</a>
+  </div>
+
+  <!-- ============================================================
+       ② HERO SECTION
+  ============================================================ -->
+  <section class="hero" id="home">
+    <div class="hero__bg"></div>
+    <div class="container">
+      <div class="hero__content">
+        <div class="hero__eyebrow">
+          <div class="line"></div>
+          <span class="label">Architecture & Design Studio — Est. 2004</span>
+        </div>
+        <h1 class="hero__headline">
+          We design<br /><em>spaces</em> that<br />shape lives.
+        </h1>
+        <p class="hero__sub">
+          Award-winning architecture studio crafting exceptional residences,
+          cultural institutions, and urban environments across four continents.
+        </p>
+        <div class="hero__actions">
+          <a href="#portfolio" class="btn-primary">
+            View Portfolio
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="btn-arrow">
+              <path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </a>
+          <a href="#about" class="btn-secondary">
+            Our Story
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="btn-arrow">
+              <path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </a>
+        </div>
+        <div class="hero__stats">
+          <div class="hero__stat">
+            <div class="hero__stat-number">200+</div>
+            <div class="hero__stat-label">Projects Delivered</div>
+          </div>
+          <div class="hero__stat">
+            <div class="hero__stat-number">42</div>
+            <div class="hero__stat-label">Awards Won</div>
+          </div>
+          <div class="hero__stat">
+            <div class="hero__stat-number">20</div>
+            <div class="hero__stat-label">Years of Practice</div>
+          </div>
+          <div class="hero__stat">
+            <div class="hero__stat-number">4</div>
+            <div class="hero__stat-label">Global Offices</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hero__scroll">
+      <div class="scroll-line"></div>
+      <span>Scroll</span>
+    </div>
+  </section>
+
+  <!-- TICKER -->
+  <div class="ticker">
+    <div class="ticker__inner" id="tickerInner">
+      <div class="ticker__item"><span class="ticker__dot"></span> Residential Excellence</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Cultural Architecture</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Urban Masterplanning</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Sustainable Design</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Interior Architecture</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Landscape Integration</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Adaptive Reuse</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Residential Excellence</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Cultural Architecture</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Urban Masterplanning</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Sustainable Design</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Interior Architecture</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Landscape Integration</div>
+      <div class="ticker__item"><span class="ticker__dot"></span> Adaptive Reuse</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       ③ ABOUT SECTION
+  ============================================================ -->
+  <section class="section" id="about">
+    <div class="container">
+      <div class="about__grid">
+        <div class="about__image-wrap reveal">
+          <div class="about__image about__image--placeholder"></div>
+          <div class="about__badge">
+            <div class="about__badge-num">20</div>
+            <div class="about__badge-text">Years of<br/>Practice</div>
+          </div>
+        </div>
+        <div class="about__content">
+          <div class="section-label-row reveal reveal-delay-1">
+            <div class="line"></div>
+            <span class="label">About the Studio</span>
+          </div>
+          <h2 class="section-title reveal reveal-delay-2">
+            Architecture rooted in<br /><em>human experience</em>
+          </h2>
+          <p class="about__body reveal reveal-delay-3">
+            Founded in 2004 by <em>Elena Hartmann and Marco Voss</em>, FORMA is an internationally recognized
+            studio at the intersection of architecture, art, and urban design. We believe that great
+            buildings are more than structures — they are living narratives that evolve with the people
+            who inhabit them.
+          </p>
+          <p class="about__body reveal reveal-delay-3">
+            Our multidisciplinary team of 80 architects, designers, and strategists works across scales —
+            from intimate private residences to landmark public institutions — always guided by the same
+            principle: that thoughtful design has the power to <em>transform how we live</em>.
+          </p>
+          <div class="reveal reveal-delay-4">
+            <div class="about__signature">Elena Hartmann</div>
+            <div class="about__signature-name">Founding Principal & Creative Director</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ④ SERVICES SECTION
+  ============================================================ -->
+  <section class="section section--dark" id="services">
+    <div class="container">
+      <div class="services__header">
+        <div>
+          <div class="section-label-row reveal">
+            <div class="line"></div>
+            <span class="label">What We Do</span>
+          </div>
+          <h2 class="section-title reveal reveal-delay-1">Our <em>services</em></h2>
+        </div>
+        <p class="section-intro reveal reveal-delay-2">
+          From concept to completion, we offer a comprehensive suite of design
+          services tailored to the ambitions of our clients.
+        </p>
+      </div>
+      <div class="services__grid reveal">
+        <!-- Service 1 -->
+        <div class="service-card">
+          <div class="service-num">01</div>
+          <svg class="service-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="6" y="6" width="36" height="36" stroke="#c8a96e" stroke-width="1.5"/>
+            <path d="M6 18H42M18 6V42" stroke="#c8a96e" stroke-width="1.5"/>
+          </svg>
+          <h3 class="service-title">Architectural Design</h3>
+          <p class="service-desc">Comprehensive design services from schematic concept through construction documentation, ensuring every detail reflects your vision.</p>
+          <div class="service-arrow">Explore <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        </div>
+        <!-- Service 2 -->
+        <div class="service-card">
+          <div class="service-num">02</div>
+          <svg class="service-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="24" r="18" stroke="#c8a96e" stroke-width="1.5"/>
+            <path d="M24 6V42M6 24H42" stroke="#c8a96e" stroke-width="1.5"/>
+          </svg>
+          <h3 class="service-title">Interior Architecture</h3>
+          <p class="service-desc">Spatial design that harmonizes aesthetics and function — creating interiors that feel as beautiful as they perform.</p>
+          <div class="service-arrow">Explore <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        </div>
+        <!-- Service 3 -->
+        <div class="service-card">
+          <div class="service-num">03</div>
+          <svg class="service-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 40L24 8L44 40H4Z" stroke="#c8a96e" stroke-width="1.5"/>
+            <path d="M4 28H44" stroke="#c8a96e" stroke-width="1.5"/>
+          </svg>
+          <h3 class="service-title">Urban Masterplanning</h3>
+          <p class="service-desc">Strategic frameworks for large-scale developments that balance density, liveability, and environmental stewardship.</p>
+          <div class="service-arrow">Explore <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        </div>
+        <!-- Service 4 -->
+        <div class="service-card">
+          <div class="service-num">04</div>
+          <svg class="service-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 40V20L24 8L40 20V40" stroke="#c8a96e" stroke-width="1.5"/>
+            <rect x="18" y="28" width="12" height="12" stroke="#c8a96e" stroke-width="1.5"/>
+          </svg>
+          <h3 class="service-title">Residential Design</h3>
+          <p class="service-desc">Private homes of exceptional quality — where individual stories become architecture, tailored to the unique life of each client.</p>
+          <div class="service-arrow">Explore <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        </div>
+        <!-- Service 5 -->
+        <div class="service-card">
+          <div class="service-num">05</div>
+          <svg class="service-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 8H40V40H8V8Z" stroke="#c8a96e" stroke-width="1.5"/>
+            <path d="M16 40V24H32V40" stroke="#c8a96e" stroke-width="1.5"/>
+            <rect x="20" y="12" width="8" height="8" stroke="#c8a96e" stroke-width="1.5"/>
+          </svg>
+          <h3 class="service-title">Cultural & Civic</h3>
+          <p class="service-desc">Museums, libraries, and civic buildings designed as democratic spaces — accessible, inspiring, and enduring.</p>
+          <div class="service-arrow">Explore <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        </div>
+        <!-- Service 6 -->
+        <div class="service-card">
+          <div class="service-num">06</div>
+          <svg class="service-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="20" r="10" stroke="#c8a96e" stroke-width="1.5"/>
+            <path d="M6 40C6 31.163 14.059 24 24 24C33.941 24 42 31.163 42 40" stroke="#c8a96e" stroke-width="1.5"/>
+          </svg>
+          <h3 class="service-title">Sustainability Strategy</h3>
+          <p class="service-desc">Integrating passive design, renewable systems, and biophilic principles to build architecture that is responsible and regenerative.</p>
+          <div class="service-arrow">Explore <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ⑤ PORTFOLIO SECTION
+  ============================================================ -->
+  <section class="section" id="portfolio">
+    <div class="container">
+      <div class="portfolio__header">
+        <div>
+          <div class="section-label-row reveal">
+            <div class="line"></div>
+            <span class="label">Selected Works</span>
+          </div>
+          <h2 class="section-title reveal reveal-delay-1">Our <em>portfolio</em></h2>
+        </div>
+        <div class="portfolio__filters reveal reveal-delay-2">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="residential">Residential</button>
+          <button class="filter-btn" data-filter="cultural">Cultural</button>
+          <button class="filter-btn" data-filter="commercial">Commercial</button>
+          <button class="filter-btn" data-filter="urban">Urban</button>
+        </div>
+      </div>
+      <div class="portfolio__grid" id="portfolioGrid">
+        <div class="project-card" data-category="residential">
+          <div class="project-card__img-bg"></div>
+          <div class="project-card__overlay"></div>
+          <div class="project-card__info">
+            <div class="project-card__cat">Residential</div>
+            <div class="project-card__title">Cascade House, Zurich</div>
+            <div class="project-card__year">2024</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="cultural">
+          <div class="project-card__img-bg"></div>
+          <div class="project-card__overlay"></div>
+          <div class="project-card__info">
+            <div class="project-card__cat">Cultural</div>
+            <div class="project-card__title">Meridian Museum, Oslo</div>
+            <div class="project-card__year">2023</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="residential">
+          <div class="project-card__img-bg"></div>
+          <div class="project-card__overlay"></div>
+          <div class="project-card__info">
+            <div class="project-card__cat">Residential</div>
+            <div class="project-card__title">Villa Serena, Amalfi</div>
+            <div class="project-card__year">2023</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="commercial">
+          <div class="project-card__img-bg"></div>
+          <div class="project-card__overlay"></div>
+          <div class="project-card__info">
+            <div class="project-card__cat">Commercial</div>
+            <div class="project-card__title">The Atrium, Singapore</div>
+            <div class="project-card__year">2022</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="urban">
+          <div class="project-card__img-bg"></div>
+          <div class="project-card__overlay"></div>
+          <div class="project-card__info">
+            <div class="project-card__cat">Urban</div>
+            <div class="project-card__title">Riverside Quarter, Copenhagen</div>
+            <div class="project-card__year">2022</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="cultural">
+          <div class="project-card__img-bg"></div>
+          <div class="project-card__overlay"></div>
+          <div class="project-card__info">
+            <div class="project-card__cat">Cultural</div>
+            <div class="project-card__title">Arc Pavilion, Venice</div>
+            <div class="project-card__year">2021</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ⑥ PROJECT DETAIL CARDS
+  ============================================================ -->
+  <section class="section section--dark">
+    <div class="container">
+      <div class="section-label-row reveal">
+        <div class="line"></div>
+        <span class="label">Featured Projects</span>
+      </div>
+      <h2 class="section-title reveal reveal-delay-1" style="margin-bottom: var(--space-lg);">In <em>depth</em></h2>
+      <div class="detail-cards__grid">
+        <div class="detail-card reveal">
+          <div class="detail-card__img">
+            <div class="detail-card__img-bg"></div>
+          </div>
+          <div class="detail-card__body">
+            <div class="detail-card__meta">
+              <span class="detail-card__tag">Residential</span>
+              <span class="detail-card__year">2024</span>
+            </div>
+            <h3 class="detail-card__title">Cascade House, Zurich</h3>
+            <p class="detail-card__desc">A bold 680m² family residence cascading down a forested hillside, with cantilevered volumes and floor-to-ceiling glazing that dissolve the boundary between interior and landscape.</p>
+            <a href="#" class="detail-card__link">View Case Study <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></a>
+            <div class="detail-card__stats">
+              <div>
+                <div class="detail-card__stat-val">680m²</div>
+                <div class="detail-card__stat-lbl">Floor Area</div>
+              </div>
+              <div>
+                <div class="detail-card__stat-val">18mo</div>
+                <div class="detail-card__stat-lbl">Duration</div>
+              </div>
+              <div>
+                <div class="detail-card__stat-val">LEED</div>
+                <div class="detail-card__stat-lbl">Certified</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-card reveal reveal-delay-1">
+          <div class="detail-card__img">
+            <div class="detail-card__img-bg"></div>
+          </div>
+          <div class="detail-card__body">
+            <div class="detail-card__meta">
+              <span class="detail-card__tag">Commercial</span>
+              <span class="detail-card__year">2023</span>
+            </div>
+            <h3 class="detail-card__title">Luma Tower, Dubai</h3>
+            <p class="detail-card__desc">A 42-storey mixed-use tower whose faceted facade responds dynamically to the desert sun, reducing solar gain by 38% while creating an iconic addition to the Dubai skyline.</p>
+            <a href="#" class="detail-card__link">View Case Study <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></a>
+            <div class="detail-card__stats">
+              <div>
+                <div class="detail-card__stat-val">42F</div>
+                <div class="detail-card__stat-lbl">Floors</div>
+              </div>
+              <div>
+                <div class="detail-card__stat-val">38%</div>
+                <div class="detail-card__stat-lbl">Energy Saving</div>
+              </div>
+              <div>
+                <div class="detail-card__stat-val">Plat.</div>
+                <div class="detail-card__stat-lbl">LEED Status</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-card reveal reveal-delay-2">
+          <div class="detail-card__img">
+            <div class="detail-card__img-bg"></div>
+          </div>
+          <div class="detail-card__body">
+            <div class="detail-card__meta">
+              <span class="detail-card__tag">Cultural</span>
+              <span class="detail-card__year">2022</span>
+            </div>
+            <h3 class="detail-card__title">Meridian Museum, Oslo</h3>
+            <p class="detail-card__desc">A landmark cultural institution housing Norway's premier contemporary art collection. The folded concrete shell references the dramatic fjord landscape while sheltering 12,000m² of gallery space.</p>
+            <a href="#" class="detail-card__link">View Case Study <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></a>
+            <div class="detail-card__stats">
+              <div>
+                <div class="detail-card__stat-val">12k</div>
+                <div class="detail-card__stat-lbl">m² Gallery</div>
+              </div>
+              <div>
+                <div class="detail-card__stat-val">3yr</div>
+                <div class="detail-card__stat-lbl">Duration</div>
+              </div>
+              <div>
+                <div class="detail-card__stat-val">Pritzker</div>
+                <div class="detail-card__stat-lbl">Shortlisted</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ⑦ PROCESS SECTION
+  ============================================================ -->
+  <section class="section" id="process">
+    <div class="container">
+      <div class="process__header">
+        <div class="section-label-row reveal">
+          <div class="line"></div>
+          <span class="label">How We Work</span>
+        </div>
+        <h2 class="section-title reveal reveal-delay-1" style="margin-bottom:0;">Our <em>design process</em></h2>
+      </div>
+      <div class="process__steps reveal reveal-delay-2">
+        <div class="process__step">
+          <div class="process__num">01</div>
+          <h3 class="process__title">Discovery & Vision</h3>
+          <p class="process__desc">Deep listening sessions to understand your life, aspirations, and the unique potential of your site. We begin every project by asking the questions that matter most.</p>
+        </div>
+        <div class="process__step">
+          <div class="process__num">02</div>
+          <h3 class="process__title">Concept Design</h3>
+          <p class="process__desc">Translating insights into architectural concepts. We develop multiple spatial narratives, testing ideas through models, sketches, and immersive visualizations.</p>
+        </div>
+        <div class="process__step">
+          <div class="process__num">03</div>
+          <h3 class="process__title">Design Development</h3>
+          <p class="process__desc">Refining the approved concept into a fully resolved design — coordinating structure, systems, and materials to create a seamlessly integrated whole.</p>
+        </div>
+        <div class="process__step">
+          <div class="process__num">04</div>
+          <h3 class="process__title">Realization</h3>
+          <p class="process__desc">Meticulous construction administration, with our team on-site ensuring that every detail of the design is executed to the highest possible standard.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ⑧ TESTIMONIALS SECTION
+  ============================================================ -->
+  <section class="section section--dark" id="testimonials">
+    <div class="container">
+      <div class="section-label-row reveal">
+        <div class="line"></div>
+        <span class="label">Client Voices</span>
+      </div>
+      <h2 class="section-title reveal reveal-delay-1" style="margin-bottom: var(--space-lg);">What they <em>say</em></h2>
+      <div class="testimonials__inner">
+        <div class="testimonials__quote-large reveal">"</div>
+        <div>
+          <div class="testimonial-card featured reveal">
+            <div class="testimonial-card__stars">★ ★ ★ ★ ★</div>
+            <p class="testimonial-card__text">"Working with FORMA was a genuinely transformative experience. They didn't just design our home — they listened to how we wanted to live, then invented a space we never knew we needed. Every morning I wake up grateful."</p>
+            <div class="testimonial-card__author">
+              <div class="testimonial-card__avatar">SB</div>
+              <div>
+                <div class="testimonial-card__name">Sofia & Bruno Reinhart</div>
+                <div class="testimonial-card__role">Cascade House, Zurich — 2024</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card reveal reveal-delay-1">
+            <div class="testimonial-card__stars">★ ★ ★ ★ ★</div>
+            <p class="testimonial-card__text">"FORMA's ability to balance civic ambition with budget discipline is remarkable. The Meridian has become a true landmark — exactly what Oslo deserved, and more than we dared to imagine."</p>
+            <div class="testimonial-card__author">
+              <div class="testimonial-card__avatar">KL</div>
+              <div>
+                <div class="testimonial-card__name">Kristoffer Lund</div>
+                <div class="testimonial-card__role">Director, Oslo Cultural Foundation — 2023</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card reveal reveal-delay-2">
+            <div class="testimonial-card__stars">★ ★ ★ ★ ★</div>
+            <p class="testimonial-card__text">"Their technical command of passive design radically outperformed our original brief. The Luma Tower has set a new benchmark for sustainable commercial architecture in the Gulf region."</p>
+            <div class="testimonial-card__author">
+              <div class="testimonial-card__avatar">AK</div>
+              <div>
+                <div class="testimonial-card__name">Aisha Al-Khalidi</div>
+                <div class="testimonial-card__role">CEO, Gulf Development Partners — 2023</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ⑨ AWARDS / CREDIBILITY SECTION
+  ============================================================ -->
+  <section class="section" id="awards">
+    <div class="container">
+      <div class="awards__inner">
+        <div>
+          <div class="section-label-row reveal">
+            <div class="line"></div>
+            <span class="label">Recognition</span>
+          </div>
+          <h2 class="section-title reveal reveal-delay-1">
+            Industry<br /><em>awards &</em><br />recognition
+          </h2>
+          <p class="section-intro reveal reveal-delay-2" style="margin-top:1.5rem;">
+            Our work has been recognised by the world's leading architectural
+            institutions and publications across four decades of practice.
+          </p>
+        </div>
+        <div>
+          <div class="awards__list reveal reveal-delay-2">
+            <div class="award-item">
+              <div class="award-item__icon">🏛</div>
+              <div>
+                <div class="award-item__name">RIBA International Prize — Shortlist</div>
+                <div class="award-item__year">2024</div>
+              </div>
+            </div>
+            <div class="award-item">
+              <div class="award-item__icon">⭐</div>
+              <div>
+                <div class="award-item__name">AIA Award for Excellence in Architecture</div>
+                <div class="award-item__year">2024</div>
+              </div>
+            </div>
+            <div class="award-item">
+              <div class="award-item__icon">🌿</div>
+              <div>
+                <div class="award-item__name">LEAF Award — Best Sustainable Building</div>
+                <div class="award-item__year">2023</div>
+              </div>
+            </div>
+            <div class="award-item">
+              <div class="award-item__icon">🏆</div>
+              <div>
+                <div class="award-item__name">Dezeen Award — Residential Building of Year</div>
+                <div class="award-item__year">2023</div>
+              </div>
+            </div>
+            <div class="award-item">
+              <div class="award-item__icon">🎖</div>
+              <div>
+                <div class="award-item__name">World Architecture Festival — Winner</div>
+                <div class="award-item__year">2022</div>
+              </div>
+            </div>
+            <div class="award-item">
+              <div class="award-item__icon">📐</div>
+              <div>
+                <div class="award-item__name">AD100 — Architecture & Design List</div>
+                <div class="award-item__year">2019–2024</div>
+              </div>
+            </div>
+          </div>
+          <div class="partners__row reveal reveal-delay-3">
+            <div class="partner-logo">Wallpaper*</div>
+            <div class="partner-logo">Dezeen</div>
+            <div class="partner-logo">Architectural Digest</div>
+            <div class="partner-logo">Frame</div>
+            <div class="partner-logo">Domus</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ⑩ BLOG / INSIGHTS
+  ============================================================ -->
+  <section class="section section--dark" id="insights">
+    <div class="container">
+      <div class="blog__header">
+        <div>
+          <div class="section-label-row reveal">
+            <div class="line"></div>
+            <span class="label">Thinking</span>
+          </div>
+          <h2 class="section-title reveal reveal-delay-1">Insights & <em>ideas</em></h2>
+        </div>
+        <a href="#" class="btn-secondary reveal reveal-delay-2">
+          All Articles
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="btn-arrow"><path d="M1 7H13M8 2L13 7L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </a>
+      </div>
+      <div class="blog__grid">
+        <div class="blog-card reveal">
+          <div class="blog-card__img">
+            <div class="blog-card__img-bg"></div>
+          </div>
+          <div class="blog-card__meta">
+            <span class="blog-card__tag">Design Theory</span>
+            <span class="blog-card__date">April 18, 2025</span>
+          </div>
+          <h3 class="blog-card__title">The Return of the Thick Wall: Architecture's Response to Climate Anxiety</h3>
+          <p class="blog-card__excerpt">As extreme weather events intensify, architects are rediscovering the thermal wisdom embedded in ancient building forms — and reinterpreting them for the 21st century.</p>
+        </div>
+        <div class="blog-card reveal reveal-delay-1">
+          <div class="blog-card__img">
+            <div class="blog-card__img-bg"></div>
+          </div>
+          <div class="blog-card__meta">
+            <span class="blog-card__tag">Practice</span>
+            <span class="blog-card__date">March 5, 2025</span>
+          </div>
+          <h3 class="blog-card__title">Beyond the Rendering: Why We Still Build Physical Models in 2025</h3>
+          <p class="blog-card__excerpt">In an era of hyper-realistic digital visualization, our studio continues to rely on hand-built models as the most honest tools of architectural exploration.</p>
+        </div>
+        <div class="blog-card reveal reveal-delay-2">
+          <div class="blog-card__img">
+            <div class="blog-card__img-bg"></div>
+          </div>
+          <div class="blog-card__meta">
+            <span class="blog-card__tag">Material Research</span>
+            <span class="blog-card__date">February 12, 2025</span>
+          </div>
+          <h3 class="blog-card__title">Rammed Earth Renaissance: Ancient Material, Contemporary Vision</h3>
+          <p class="blog-card__excerpt">Mass timber gets all the attention, but rammed earth is quietly staging a remarkable comeback — and for good reason. We explore its tactile, thermal, and carbon properties.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ⑪ CONTACT SECTION
+  ============================================================ -->
+  <section class="section" id="contact">
+    <div class="container">
+      <div class="contact__inner">
+        <div class="contact__info">
+          <div class="section-label-row reveal">
+            <div class="line"></div>
+            <span class="label">Get in Touch</span>
+          </div>
+          <h2 class="section-title reveal reveal-delay-1">Let's create<br /><em>something</em><br />extraordinary.</h2>
+          <p class="section-intro reveal reveal-delay-2" style="margin: 1.5rem 0 2.5rem;">
+            Whether you have a clear brief or are just beginning to dream,
+            we'd love to hear about your project.
+          </p>
+          <div class="reveal reveal-delay-2">
+            <div class="contact__detail">
+              <div class="contact__detail-icon">📍</div>
+              <div>
+                <div class="contact__detail-lbl">Studio</div>
+                <div class="contact__detail-val">Schillerstrasse 14, 8001 Zurich, Switzerland</div>
+              </div>
+            </div>
+            <div class="contact__detail">
+              <div class="contact__detail-icon">📞</div>
+              <div>
+                <div class="contact__detail-lbl">Phone</div>
+                <div class="contact__detail-val">+41 44 123 45 67</div>
+              </div>
+            </div>
+            <div class="contact__detail">
+              <div class="contact__detail-icon">✉️</div>
+              <div>
+                <div class="contact__detail-lbl">Email</div>
+                <div class="contact__detail-val">studio@forma-architecture.com</div>
+              </div>
+            </div>
+            <div class="contact__detail">
+              <div class="contact__detail-icon">🕐</div>
+              <div>
+                <div class="contact__detail-lbl">Office Hours</div>
+                <div class="contact__detail-val">Monday – Friday, 9:00 – 18:00 CET</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact__form reveal reveal-delay-2">
+          <div id="formContent">
+            <div class="section-label-row" style="margin-bottom:1.5rem;">
+              <span class="label">New Project Enquiry</span>
+            </div>
+            <div class="form__row">
+              <div class="form__group">
+                <label class="form__label" for="fname">First Name *</label>
+                <input class="form__input" type="text" id="fname" placeholder="Elena" />
+                <span class="form__error" id="fnameErr">Please enter your first name.</span>
+              </div>
+              <div class="form__group">
+                <label class="form__label" for="lname">Last Name *</label>
+                <input class="form__input" type="text" id="lname" placeholder="Hartmann" />
+                <span class="form__error" id="lnameErr">Please enter your last name.</span>
+              </div>
+            </div>
+            <div class="form__group">
+              <label class="form__label" for="email">Email Address *</label>
+              <input class="form__input" type="email" id="email" placeholder="your@email.com" />
+              <span class="form__error" id="emailErr">Please enter a valid email address.</span>
+            </div>
+            <div class="form__group">
+              <label class="form__label" for="phone">Phone Number</label>
+              <input class="form__input" type="tel" id="phone" placeholder="+41 00 000 00 00" />
+            </div>
+            <div class="form__group">
+              <label class="form__label" for="projectType">Project Type *</label>
+              <select class="form__select" id="projectType">
+                <option value="">Select project type…</option>
+                <option value="residential">Private Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="cultural">Cultural / Civic</option>
+                <option value="urban">Urban Development</option>
+                <option value="interior">Interior Architecture</option>
+                <option value="other">Other</option>
+              </select>
+              <span class="form__error" id="typeErr">Please select a project type.</span>
+            </div>
+            <div class="form__group">
+              <label class="form__label" for="budget">Approximate Budget</label>
+              <select class="form__select" id="budget">
+                <option value="">Select budget range…</option>
+                <option value="500k">CHF 500k – 1M</option>
+                <option value="1m">CHF 1M – 5M</option>
+                <option value="5m">CHF 5M – 20M</option>
+                <option value="20m">CHF 20M+</option>
+              </select>
+            </div>
+            <div class="form__group">
+              <label class="form__label" for="message">Tell Us About Your Project *</label>
+              <textarea class="form__textarea" id="message" placeholder="Share the vision, location, scale, and any specific ambitions or constraints…"></textarea>
+              <span class="form__error" id="msgErr">Please tell us about your project.</span>
+            </div>
+            <button class="form__submit" id="formSubmit" type="button">Send Enquiry →</button>
+          </div>
+          <div class="form__success" id="formSuccess">
+            <div class="form__success-icon">✦</div>
+            <div class="form__success-title">Thank you.</div>
+            <p class="form__success-msg">Your enquiry has been received. A member of our team will be in touch within two business days.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ⑫ FOOTER
+  ============================================================ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__top">
+        <div class="footer__brand">
+          <a href="#" class="nav__logo">FORMA<span>.</span></a>
+          <p class="footer__tagline">
+            An internationally recognised architecture studio crafting spaces that shape the way we live, work, and gather.
+          </p>
+          <div class="footer__social">
+            <a href="#" aria-label="Instagram">In</a>
+            <a href="#" aria-label="LinkedIn">Li</a>
+            <a href="#" aria-label="Twitter">X</a>
+            <a href="#" aria-label="Pinterest">Pi</a>
+          </div>
+        </div>
+        <div>
+          <div class="footer__col-title">Studio</div>
+          <ul class="footer__links">
+            <li><a href="#about">About FORMA</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#process">Our Process</a></li>
+            <li><a href="#awards">Awards</a></li>
+            <li><a href="#">Careers</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer__col-title">Work</div>
+          <ul class="footer__links">
+            <li><a href="#portfolio">Portfolio</a></li>
+            <li><a href="#">Residential</a></li>
+            <li><a href="#">Cultural</a></li>
+            <li><a href="#">Commercial</a></li>
+            <li><a href="#">Urban</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer__col-title">Contact</div>
+          <ul class="footer__links">
+            <li><a href="#contact">New Enquiry</a></li>
+            <li><a href="#">Zurich Studio</a></li>
+            <li><a href="#">Oslo Office</a></li>
+            <li><a href="#">Dubai Studio</a></li>
+            <li><a href="#">Press & Media</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <div class="footer__copy">© 2025 FORMA Architecture & Design Studio. All rights reserved.</div>
+        <div class="footer__bottom-links">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Use</a>
+          <a href="#">Cookie Settings</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT
+  ============================================================ -->
+  <script>
+    // ============================================================
+    // CUSTOM CURSOR
+    // ============================================================
+    (function() {
+      const cursor = document.getElementById('cursor');
+      const ring   = document.getElementById('cursorRing');
+      if (!cursor || !ring) return;
+
+      let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+      document.addEventListener('mousemove', e => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        cursor.style.left = mouseX + 'px';
+        cursor.style.top  = mouseY + 'px';
+      });
+
+      // Smooth ring follow
+      (function animateRing() {
+        ringX += (mouseX - ringX) * 0.12;
+        ringY += (mouseY - ringY) * 0.12;
+        ring.style.left = ringX + 'px';
+        ring.style.top  = ringY + 'px';
+        requestAnimationFrame(animateRing);
+      })();
+
+      // Hover effect on interactive elements
+      const hoverTargets = document.querySelectorAll('a, button, .service-card, .project-card, .detail-card, .blog-card, .filter-btn');
+      hoverTargets.forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+      });
+    })();
+
+    // ============================================================
+    // STICKY NAVBAR
+    // ============================================================
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 60);
+    });
+
+    // ============================================================
+    // MOBILE MENU
+    // ============================================================
+    (function() {
+      const hamburger   = document.getElementById('hamburger');
+      const mobileMenu  = document.getElementById('mobileMenu');
+      const mobileLinks = document.querySelectorAll('.mobile-link');
+      let open = false;
+
+      function toggle() {
+        open = !open;
+        hamburger.classList.toggle('open', open);
+        mobileMenu.classList.toggle('open', open);
+        document.body.style.overflow = open ? 'hidden' : '';
+      }
+
+      hamburger.addEventListener('click', toggle);
+      mobileLinks.forEach(link => link.addEventListener('click', () => {
+        if (open) toggle();
+      }));
+    })();
+
+    // ============================================================
+    // SCROLL REVEAL
+    // ============================================================
+    (function() {
+      const reveals = document.querySelectorAll('.reveal');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+
+      reveals.forEach(el => observer.observe(el));
+    })();
+
+    // ============================================================
+    // PORTFOLIO FILTER
+    // ============================================================
+    (function() {
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      const cards      = document.querySelectorAll('.project-card');
+
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          // Update active state
+          filterBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          const filter = btn.dataset.filter;
+
+          cards.forEach(card => {
+            const cat = card.dataset.category;
+            const show = filter === 'all' || cat === filter;
+            card.classList.toggle('hidden', !show);
+          });
+        });
+      });
+    })();
+
+    // ============================================================
+    // CONTACT FORM VALIDATION
+    // ============================================================
+    (function() {
+      const submit = document.getElementById('formSubmit');
+      if (!submit) return;
+
+      function showError(inputId, errId, show) {
+        const input = document.getElementById(inputId);
+        const err   = document.getElementById(errId);
+        if (!input || !err) return;
+        input.classList.toggle('error', show);
+        err.classList.toggle('show', show);
+      }
+
+      function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      }
+
+      submit.addEventListener('click', () => {
+        const fname       = document.getElementById('fname').value.trim();
+        const lname       = document.getElementById('lname').value.trim();
+        const email       = document.getElementById('email').value.trim();
+        const projectType = document.getElementById('projectType').value;
+        const message     = document.getElementById('message').value.trim();
+
+        let valid = true;
+
+        showError('fname', 'fnameErr', !fname);
+        if (!fname) valid = false;
+
+        showError('lname', 'lnameErr', !lname);
+        if (!lname) valid = false;
+
+        showError('email', 'emailErr', !isValidEmail(email));
+        if (!isValidEmail(email)) valid = false;
+
+        showError('projectType', 'typeErr', !projectType);
+        if (!projectType) valid = false;
+
+        showError('message', 'msgErr', !message);
+        if (!message) valid = false;
+
+        if (valid) {
+          // Show success state
+          document.getElementById('formContent').style.display = 'none';
+          document.getElementById('formSuccess').classList.add('show');
+        }
+      });
+
+      // Clear errors on input
+      ['fname','lname','email','projectType','message'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => el.classList.remove('error'));
+      });
+    })();
+
+    // ============================================================
+    // SMOOTH SCROLL for anchor links
+    // ============================================================
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', e => {
+        const target = document.querySelector(anchor.getAttribute('href'));
+        if (!target) return;
+        e.preventDefault();
+        const navH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 80;
+        window.scrollTo({
+          top: target.offsetTop - navH,
+          behavior: 'smooth'
+        });
+      });
+    });
+  </script>
+</body>
+</html>
